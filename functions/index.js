@@ -3,7 +3,7 @@ const admin = require('firebase-admin');
 
 admin.initializeApp(functions.config().firebase)
 
-exports.sendInvites = functions.database.ref("/matches/{mid}/users").onWrite(event => {
+exports.sendInvites = functions.database.ref("/matches/{mid}/users").onCreate(event => {
 
     const users = event.data.current.val();
     const matchID = event.params["mid"]
@@ -12,6 +12,7 @@ exports.sendInvites = functions.database.ref("/matches/{mid}/users").onWrite(eve
 
     for (user in users) {
         promises.push(admin.database().ref("/users/" + user).once("value"))
+        admin.database().ref("/users/" + user + "/matches/" + matchID).set(admin.database.ServerValue.TIMESTAMP)
     }
 
     return Promise.all(promises).then(results => {
@@ -42,6 +43,19 @@ exports.sendInvites = functions.database.ref("/matches/{mid}/users").onWrite(eve
 
 
 });
+
+exports.deleteMatches = functions.database.ref("/matches/{mid}").onDelete(event => {
+
+    const matchID = event.params["mid"];
+    const users = event.data.previous.child("users");
+
+    console.log("Users: " + users);
+
+    for(user in users.child()) {
+        admin.database().ref("/users/" + user.key + "/matches/" + matchID).remove;
+    }
+});
+
 var colors = ["RED", "YELLOW", "BLUE", "GREEN"];
 
 // exports.setUpPlayerColors = functions.database.ref('/matchesTry/players/{pushID}').onCreate(event => {
@@ -52,37 +66,36 @@ var colors = ["RED", "YELLOW", "BLUE", "GREEN"];
 //     return event.data.ref.set(object)
 // });
 
-exports.countPlayersReady = functions.database.ref('/matchesTry/MATCHID/users/{playerID}/taken').onWrite(event => {
+exports.countPlayersReady = functions.database.ref('/matches/{matchID}/users/{playerID}/taken').onWrite(event => {
     const playerDbRef = event.data.ref.parent.parent
-    playerCount = 0
-
+    playersCount = 0
 
     return playerDbRef.once('value').then(snapshot => {
         console.log("im about to loop baby", snapshot.val())
         snapshot.forEach(function (child) {
-            console.log("parent ", child.key, " before incrementing ", child.child('taken').val(), " player count ", playerCount)
+            console.log("parent ", child.key, " before incrementing ", child.child('taken').val(), " player count ", playersCount)
 
-            if (child.child('taken').val() == "true") {
-                playerCount++
-                console.log("parent ", child.key, " after incrementing ", child.child('taken').val(), " player count ", playerCount)
+            if (child.child('taken').val() == true) {
+                playersCount++
+                console.log("parent ", child.key, " after incrementing ", child.child('taken').val(), " player count ", playersCount)
             }
 
         });
-        if (playerCount == 4) {
-            var nuoviColors = ["RED", "YELLOW", "BLUE", "GREEN"];
+
+        if (playersCount == 4) {
+            var newColors = ["RED", "YELLOW", "BLUE", "GREEN"];
             var sequence = { 1: "BLUE" }
             console.log("setting object sequence", sequence.toString())
-            return playerDbRef.parent.child("CPUSequence").set(sequence)
+            return playerDbRef.parent.child("cpuSequence").set(sequence)
         }
     })
 
-
-
 });
-exports.checkIfPlayersSequenceIsCorrect = functions.database.ref('/matchesTry/MATCHID/PlayersSequence/{colorAddedID}').onCreate(event => {
+
+exports.checkIfPlayersSequenceIsCorrect = functions.database.ref('/matches/{matchID}/playersSequence/{colorAddedID}').onCreate(event => {
     var colorAdded = event.data
     console.log("color addeded ", colorAdded.val())
-    const cpuSequenceRef = event.data.ref.parent.parent.child('CPUSequence').ref
+    const cpuSequenceRef = event.data.ref.parent.parent.child('cpuSequence').ref
     const sequenceIndexRef = event.data.ref.parent.parent.child('index').ref
     return cpuSequenceRef.once('value').then(snapshot => {
         console.log("examinating CpuSequence ", snapshot.val(), " ", snapshot.key, " ", snapshot.numChildren())
@@ -95,10 +108,10 @@ exports.checkIfPlayersSequenceIsCorrect = functions.database.ref('/matchesTry/MA
                     console.log("ok")
                     console.log("check statement ", index == snapshot.numChildren(), " index ", index, " numChildren ", snapshot.numChildren())
                     if (index == snapshot.numChildren()) { //
-                        var nuoviColors = ["RED", "YELLOW", "BLUE", "GREEN"];
+                        var newColors = ["RED", "YELLOW", "BLUE", "GREEN"];
                         var newIndex = snapshot.numChildren() + 1
-                        var newColor = { newIndex: getColor(nuoviColors) }
-                        cpuSequenceRef.child(newIndex.toString()).set(getColor(nuoviColors))
+                        var newColor = { newIndex: getColor(newColors) }
+                        cpuSequenceRef.child(newIndex.toString()).set(getColor(newColors))
                         sequenceIndexRef.set('0')
 
                         return event.data.ref.parent.set("empty")
@@ -113,7 +126,7 @@ exports.checkIfPlayersSequenceIsCorrect = functions.database.ref('/matchesTry/MA
     })
 })
 
-exports.setIndex = functions.database.ref('/matchesTry/MATCHID/index').onWrite(event => {
+exports.setIndex = functions.database.ref('/matches/{matchID}/index').onWrite(event => {
     console.log("index value ", event.data.val())
     const index = Number(event.data.val())
     if (index == 0) {
@@ -132,20 +145,3 @@ function getColor(colors) {
     colors.splice(index, 1);
     return color;
 }
-
-
-/*
-exports.startMatch = functions.database.ref("/matches/{mid}/users").onUpdate(event => {
-
-    const users = event.data;
-
-    const colors = ["R", "G", "B", "Y"];
-
-    for(user in users) {
-        const col = random(colors);
-        user.child("color").setValue(col);
-        colors.remove(col);
-    }
-
-
-});*/
