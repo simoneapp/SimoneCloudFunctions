@@ -56,15 +56,14 @@ exports.deleteMatches = functions.database.ref("/matches/{mid}").onDelete(event 
     }
 });
 
+/*
 var colors = ["RED", "YELLOW", "BLUE", "GREEN"];
 
-// exports.setUpPlayerColors = functions.database.ref('/matchesTry/players/{pushID}').onCreate(event => {
-//     const playerAdded = event.data.val();
-//     console.log("EVENT DATA: ", playerAdded)
-//     const object = { color: getColor(colors), taken: "false", start: "false" }
-
-//     return event.data.ref.set(object)
-// });
+exports.setUpPlayerColors = functions.database.ref('/matches/{mid}/users/{uid}').onCreate(event => {
+    const playerAdded = event.data.val();
+    console.log("EVENT DATA: ", playerAdded)
+    return event.data.ref.child("color").set(getColor(colors))
+});*/
 
 exports.countPlayersReady = functions.database.ref('/matches/{matchID}/users/{playerID}/taken').onWrite(event => {
     const playerDbRef = event.data.ref.parent.parent
@@ -79,22 +78,46 @@ exports.countPlayersReady = functions.database.ref('/matches/{matchID}/users/{pl
                 playersCount++
                 console.log("parent ", child.key, " after incrementing ", child.child('taken').val(), " player count ", playersCount)
             }
-
         });
 
         if (playersCount == 4) {
-            var newColors = ["RED", "YELLOW", "BLUE", "GREEN"];
-            var sequence = { 1: "BLUE" }
+            var colors = ["RED", "YELLOW", "BLUE", "GREEN"];
+            var sequence = { 1: randomIn(colors) }
             console.log("setting object sequence", sequence.toString())
+
+            snapshot.forEach(function(child) {
+                const col = randomIn(colors)
+                console.log("Color: " + col + ", remaining: " + colors)
+                child.child('color').ref.set(col)
+                colors = colors.filter(item => item !== col)
+            })
+
+            playerDbRef.parent.child("started").ref.set(true)
+
             return playerDbRef.parent.child("cpuSequence").set(sequence)
         }
     })
 
 });
 
+function randomIn(array) {
+    return array[Math.floor((Math.random() * array.length))]
+}
+
+function getColor(colors) {
+    var color;
+    do {
+        color = colors[Math.floor((Math.random() * colors.length))]
+    }
+    while (color == null);
+    const index = colors.indexOf(color);
+    colors.splice(index, 1);
+    return color;
+}
+
 exports.checkIfPlayersSequenceIsCorrect = functions.database.ref('/matches/{matchID}/playersSequence/{colorAddedID}').onCreate(event => {
     var colorAdded = event.data
-    console.log("color addeded ", colorAdded.val())
+    console.log("color added ", colorAdded.val())
     const cpuSequenceRef = event.data.ref.parent.parent.child('cpuSequence').ref
     const sequenceIndexRef = event.data.ref.parent.parent.child('index').ref
     return cpuSequenceRef.once('value').then(snapshot => {
@@ -115,7 +138,6 @@ exports.checkIfPlayersSequenceIsCorrect = functions.database.ref('/matches/{matc
                         sequenceIndexRef.set('0')
 
                         return event.data.ref.parent.set("empty")
-
                     }
                 }
                 else {
@@ -133,15 +155,3 @@ exports.setIndex = functions.database.ref('/matches/{matchID}/index').onWrite(ev
         return event.data.ref.set('1')
     }
 });
-
-
-function getColor(colors) {
-    var color;
-    do {
-        color = colors[Math.floor((Math.random() * colors.length))]
-    }
-    while (color == null);
-    const index = colors.indexOf(color);
-    colors.splice(index, 1);
-    return color;
-}
