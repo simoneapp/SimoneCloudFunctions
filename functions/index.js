@@ -47,7 +47,7 @@ exports.sendInvites = functions.database.ref("/matches/{mid}/users").onCreate(ev
 exports.deleteMatches = functions.database.ref("/matches/{mid}").onDelete(event => {
 
     const matchID = event.params["mid"];
-    const users = event.data.previous.child("users");
+    const users = event.data.previous.child("users").ref;
 
     console.log("Users: " + users);
 
@@ -82,7 +82,8 @@ exports.countPlayersReady = functions.database.ref('/matches/{matchID}/users/{pl
 
         if (playersCount == 4) {
             var colors = ["RED", "YELLOW", "BLUE", "GREEN"];
-            var sequence = { 1: randomIn(colors) }
+            var firstRandom = randomIn(colors)
+            var sequence = { 1: firstRandom }
             console.log("setting object sequence", sequence.toString())
 
             snapshot.forEach(function(child) {
@@ -94,11 +95,21 @@ exports.countPlayersReady = functions.database.ref('/matches/{matchID}/users/{pl
 
             playerDbRef.parent.child("started").ref.set(true)
 
+            var blinkRef = playerDbRef.parent.child("blink").ref
+            resetBlinkingIndex(firstRandom, blinkRef)
+
             return playerDbRef.parent.child("cpuSequence").set(sequence)
         }
     })
 
 });
+
+function resetBlinkingIndex(nextColor, blinkRef) {
+    console.log('Trying to resetting index to ' + nextColor)
+    
+    blinkRef.set({color: 'RST',index: '0'})
+    blinkRef.set({color: nextColor,index: '1'})
+}
 
 function randomIn(array) {
     return array[Math.floor((Math.random() * array.length))]
@@ -120,6 +131,7 @@ exports.checkIfPlayersSequenceIsCorrect = functions.database.ref('/matches/{matc
     console.log("color added ", colorAdded.val())
     const cpuSequenceRef = event.data.ref.parent.parent.child('cpuSequence').ref
     const sequenceIndexRef = event.data.ref.parent.parent.child('index').ref
+    const blinkRef = event.data.ref.parent.parent.child('blink').ref
     return cpuSequenceRef.once('value').then(snapshot => {
         console.log("examinating CpuSequence ", snapshot.val(), " ", snapshot.key, " ", snapshot.numChildren())
         snapshot.forEach(function (childSnapshot) { //loop through CPUSequence colors
@@ -133,25 +145,33 @@ exports.checkIfPlayersSequenceIsCorrect = functions.database.ref('/matches/{matc
                     if (index == snapshot.numChildren()) { //
                         var newColors = ["RED", "YELLOW", "BLUE", "GREEN"];
                         var newIndex = snapshot.numChildren() + 1
-                        var newColor = { newIndex: getColor(newColors) }
+                        var col = getColor(newColors)
+                        var newColor = { newIndex: col }
                         cpuSequenceRef.child(newIndex.toString()).set(getColor(newColors))
                         sequenceIndexRef.set('0')
 
-                        return event.data.ref.parent.set("empty")
+                        //Empty
+                        event.data.ref.parent.set("playing")
+                        resetBlinkingIndex(snapshot.child('1').val(), blinkRef)
+
+                        return 
                     }
                 }
                 else {
-                    return event.data.ref.parent.set("wrong")
+                    //Wrong
+                    event.data.ref.parent.set("playing")
+                    resetBlinkingIndex(snapshot.child('1').val(), blinkRef)
                 }
             }
         })
     })
 })
 
+
 exports.setIndex = functions.database.ref('/matches/{matchID}/index').onWrite(event => {
     console.log("index value ", event.data.val())
-    const index = Number(event.data.val())
-    if (index == 0) {
+    const value = event.data.val()
+    if (value != null && Number(value) == 0) {
         return event.data.ref.set('1')
     }
 });
