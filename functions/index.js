@@ -56,14 +56,7 @@ exports.deleteMatches = functions.database.ref("/matches/{mid}").onDelete(event 
     }
 });
 
-/*
-var colors = ["RED", "YELLOW", "BLUE", "GREEN"];
 
-exports.setUpPlayerColors = functions.database.ref('/matches/{mid}/users/{uid}').onCreate(event => {
-    const playerAdded = event.data.val();
-    console.log("EVENT DATA: ", playerAdded)
-    return event.data.ref.child("color").set(getColor(colors))
-});*/
 
 exports.countPlayersReady = functions.database.ref('/matches/{matchID}/users/{playerID}/taken').onWrite(event => {
     const playerDbRef = event.data.ref.parent.parent
@@ -80,7 +73,7 @@ exports.countPlayersReady = functions.database.ref('/matches/{matchID}/users/{pl
             }
         });
 
-        if (playersCount == 4) {
+        if (playersCount == 4) { //set players colors
             var colors = ["RED", "YELLOW", "BLUE", "GREEN"];
             var firstRandom = randomIn(colors)
             var sequence = { 1: firstRandom }
@@ -94,7 +87,8 @@ exports.countPlayersReady = functions.database.ref('/matches/{matchID}/users/{pl
             })
 
             playerDbRef.parent.child("started").ref.set(true)
-
+          // playerDbRef.parent.child("index").set("0")
+           // playerDbRef.parent.child("blink").set({firstRandom,index: '0'})
             var blinkRef = playerDbRef.parent.child("blink").ref
             resetBlinkingIndex(firstRandom, blinkRef)
 
@@ -103,6 +97,14 @@ exports.countPlayersReady = functions.database.ref('/matches/{matchID}/users/{pl
     })
 
 });
+// exports.listenBlinkIndexChange=functions.database.ref('/matches/{matchID}/blink/index').onWrite(event=>{
+    
+//     console.log("index value ", event.data.val())
+//     const value = event.data.val()
+//     if (value != null && Number(value) == 0) {
+//         return event.data.ref.set('1')
+//     }
+// })
 
 function resetBlinkingIndex(nextColor, blinkRef) {
     console.log('Trying to resetting index to ' + nextColor)
@@ -130,7 +132,7 @@ exports.checkIfPlayersSequenceIsCorrect = functions.database.ref('/matches/{matc
     var colorAdded = event.data
     console.log("color added ", colorAdded.val())
     const cpuSequenceRef = event.data.ref.parent.parent.child('cpuSequence').ref
-    const sequenceIndexRef = event.data.ref.parent.parent.child('index').ref
+    //const sequenceIndexRef = event.data.ref.parent.parent.child('index').ref
     const blinkRef = event.data.ref.parent.parent.child('blink').ref
     return cpuSequenceRef.once('value').then(snapshot => {
         console.log("examinating CpuSequence ", snapshot.val(), " ", snapshot.key, " ", snapshot.numChildren())
@@ -148,7 +150,7 @@ exports.checkIfPlayersSequenceIsCorrect = functions.database.ref('/matches/{matc
                         var col = getColor(newColors)
                         var newColor = { newIndex: col }
                         cpuSequenceRef.child(newIndex.toString()).set(getColor(newColors))
-                        sequenceIndexRef.set('0')
+                      //  sequenceIndexRef.set('0')
 
                         //Empty
                         event.data.ref.parent.set("playing")
@@ -168,10 +170,10 @@ exports.checkIfPlayersSequenceIsCorrect = functions.database.ref('/matches/{matc
 })
 
 
-exports.setIndex = functions.database.ref('/matches/{matchID}/index').onWrite(event => {
-    console.log("index value ", event.data.val())
-    const value = event.data.val()
-    if (value != null && Number(value) == 0) {
-        return event.data.ref.set('1')
-    }
-});
+// exports.setIndex = functions.database.ref('/matches/{matchID}/index').onWrite(event => {
+//     console.log("index value ", event.data.val())
+//     const value = event.data.val()
+//     if (value != null && Number(value) == 0) {
+//         return event.data.ref.set('1')
+//     }
+// });
