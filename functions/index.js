@@ -44,17 +44,17 @@ exports.sendInvites = functions.database.ref("/matches/{mid}/users").onCreate(ev
 
 });
 
-// exports.deleteMatches = functions.database.ref("/matches/{mid}").onDelete(event => {
+exports.deleteMatches = functions.database.ref("/matches/{mid}").onDelete(event => {
 
-//     const matchID = event.params["mid"];
-//     const users = event.data.previous.child("users").ref;
+    const matchID = event.params["mid"];
+    const users = event.data.previous.child("users").ref;
 
-//     console.log("Users: " + users);
+    console.log("Users: " + users);
 
-//     for(user in users.child()) {
-//         admin.database().ref("/users/" + user.key + "/matches/" + matchID).remove;
-//     }
-// });
+    for(user in users.child()) {
+        admin.database().ref("/users/" + user.key + "/matches/" + matchID).remove;
+    }
+});
 
 
 
@@ -122,29 +122,23 @@ function getColor(colors) {
 
 exports.checkIfPlayersSequenceIsCorrect = functions.database.ref('/matches/{matchID}/playersSequence/{colorAddedID}').onCreate(event => {
     var colorAdded = event.data
-   // console.log("color added ", colorAdded.val())
     const cpuSequenceRef = event.data.ref.parent.parent.child('cpuSequence').ref
-    //const sequenceIndexRef = event.data.ref.parent.parent.child('index').ref
     const blinkRef = event.data.ref.parent.parent.child('blink').ref
     return cpuSequenceRef.once('value').then(snapshot => {
-      //  console.log("examinating CpuSequence ", snapshot.val(), " ", snapshot.key, " ", snapshot.numChildren())
         snapshot.forEach(function (childSnapshot) { //loop through CPUSequence colors
           console.log("looping ", colorAdded.key, " ", childSnapshot.key)
             if (childSnapshot.key == colorAdded.key) {
                 //checks if added color has the same index as the current child's
-                console.log(" cpu color ",childSnapshot.val(), " color added ", colorAdded.val())
 
                 if (childSnapshot.val() == colorAdded.val()) {
                     var index = Number(childSnapshot.key)
-                    // console.log("ok")
-                    // console.log("check statement ", index == snapshot.numChildren(), " index ", index, " numChildren ", snapshot.numChildren())
+                   
                     if (index == snapshot.numChildren()) { //
                         var newColors = ["RED", "YELLOW", "BLUE", "GREEN"];
                         var newIndex = snapshot.numChildren() + 1
                         var col = getColor(newColors)
                         var newColor = { newIndex: col }
                         cpuSequenceRef.child(newIndex.toString()).set(getColor(newColors))
-                      //  sequenceIndexRef.set('0')
 
                         //Empty
                         event.data.ref.parent.set("playing")
@@ -156,7 +150,6 @@ exports.checkIfPlayersSequenceIsCorrect = functions.database.ref('/matches/{matc
                 else {
                     //Wrong
                     event.data.ref.parent.parent.child("status").set({case:"wrong",color:colorAdded.val()})
-                    //resetBlinkingIndex(snapshot.child('1').val(), blinkRef)
                 }
             }
         })
