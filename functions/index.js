@@ -26,7 +26,8 @@ exports.sendNotification = functions.database.ref("/multiplayer/{mid}").onUpdate
         const payload = {
             notification: {
                 title: "You've got a new Simone challenge!",
-                body: "recipient: " + userID + ", match ID: " + matchID
+                body: "recipient: " + userID + ", match ID: " + matchID,
+                click_action: "android.intent.action.MAIN"
             },
         };
 
