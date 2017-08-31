@@ -142,6 +142,7 @@ exports.checkIfPlayersSequenceIsCorrect = functions.database.ref('/matches/{matc
 
                         //Empty
                         event.data.ref.parent.set("playing")
+                        event.data.ref.parent.parent.child("status").set("cpu turn")
                         resetBlinkingIndex(snapshot.child('1').val(), blinkRef) 
 
                         return 
