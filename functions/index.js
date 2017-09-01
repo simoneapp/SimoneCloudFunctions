@@ -86,7 +86,7 @@ exports.countPlayersReady = functions.database.ref('/matches/{matchID}/users/{pl
                 colors = colors.filter(item => item !== col)
             })
 
-            playerDbRef.parent.child("status").ref.set("started")
+            playerDbRef.parent.child("status").ref.set("Simone's turn")
        
             var blinkRef = playerDbRef.parent.child("blink").ref
             resetBlinkingIndex(firstRandom, blinkRef)
