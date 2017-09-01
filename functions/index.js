@@ -3,6 +3,46 @@ const admin = require('firebase-admin');
 
 admin.initializeApp(functions.config().firebase)
 
+exports.sendNotification = functions.database.ref("/multiplayer/{mid}").onUpdate(event => {
+
+    const firstplayer = event.data.current.child("firstplayer").child("id").val()
+    const secondplayer = event.data.current.child("secondplayer").child("id").val()
+    const matchID = event.params["mid"]
+
+    const promises = [];
+
+    console.log("Firstplayer ID:", "/users/" + firstplayer);
+    console.log("Secondplayer ID:", "/users/" + secondplayer);
+    promises.push(admin.database().ref("/users/" + firstplayer).once("value"))
+    promises.push(admin.database().ref("/users/" + secondplayer).once("value"))
+    
+
+    return Promise.all(promises).then(results => {
+        console.log("Results: " + results.toString());
+
+        const userID = results[0].key;
+        const token = results[0].child("token").val();
+
+        const payload = {
+            notification: {
+                title: "You've got a new Simone challenge!",
+                body: "recipient: " + userID + ", match ID: " + matchID,
+                click_action: "android.intent.action.MAIN"
+            },
+        };
+
+        admin.messaging().sendToDevice(token, payload)
+            .then(function (response) {
+                console.log("Successfully sent notification:", response);
+            })
+            .catch(function (error) {
+                console.log("Error sending message:", error);
+            });
+    });
+});
+
+
+
 exports.sendInvites = functions.database.ref("/matches/{mid}/users").onCreate(event => {
 
     const users = event.data.current.val();
