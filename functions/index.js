@@ -126,7 +126,7 @@ exports.countPlayersReady = functions.database.ref('/matches/{matchID}/users/{pl
                 colors = colors.filter(item => item !== col)
             })
 
-            playerDbRef.parent.child("status").ref.set("started")
+            playerDbRef.parent.child("status").ref.set("Simone's turn")
        
             var blinkRef = playerDbRef.parent.child("blink").ref
             resetBlinkingIndex(firstRandom, blinkRef)
@@ -182,6 +182,7 @@ exports.checkIfPlayersSequenceIsCorrect = functions.database.ref('/matches/{matc
 
                         //Empty
                         event.data.ref.parent.set("playing")
+                        event.data.ref.parent.parent.child("status").set("cpu turn")
                         resetBlinkingIndex(snapshot.child('1').val(), blinkRef) 
 
                         return 
