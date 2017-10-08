@@ -3,7 +3,7 @@ const admin = require('firebase-admin');
 
 admin.initializeApp(functions.config().firebase)
 
-exports.sendNotification = functions.database.ref("/multiplayer/{mid}").onUpdate(event => {
+/*exports.sendNotification = functions.database.ref("/multiplayer/{mid}").onUpdate(event => {
 
     const firstplayer = event.data.current.child("firstplayer").child("id").val()
     const secondplayer = event.data.current.child("secondplayer").child("id").val()
@@ -39,7 +39,7 @@ exports.sendNotification = functions.database.ref("/multiplayer/{mid}").onUpdate
                 console.log("Error sending message:", error);
             });
     });
-});
+});*/
 
 
 
